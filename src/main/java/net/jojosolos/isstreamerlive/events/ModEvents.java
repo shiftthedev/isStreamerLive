@@ -30,6 +30,7 @@ import net.minecraftforge.network.NetworkInstance;
 import net.minecraftforge.server.command.ConfigCommand;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.jmx.Server;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.BufferedReader;
@@ -74,30 +75,26 @@ public class ModEvents {
 
     @SubscribeEvent
     public static void onTablistFormat(PlayerEvent.TabListNameFormat event) {
-//        event.setDisplayName(Component.literal(event.getEntity().getDisplayName().toString()).withStyle(ChatFormatting.RED));
-        event.setDisplayName(Component.literal("● ").withStyle(ChatFormatting.RED).withStyle(ChatFormatting.BOLD)
-                    .append(event.getEntity().getName().getString()));
+        if(isChannelLive(event.getEntity())) {
+            event.setDisplayName(Component.literal("● ").withStyle(ChatFormatting.RED).append(event.getEntity().getName().getString()));
+        } else
+            event.setDisplayName(Component.literal(event.getEntity().getName().getString()).withStyle(ChatFormatting.WHITE));
     }
 
-        @SubscribeEvent
-    public static void onRenderNamePlate(RenderNameTagEvent event) {
-        if(event.getEntity().getPersistentData().contains(IsStreamerLive.MODID + "streamername")) {
-            if(isChannelLive(event.getEntity()))
-                event.setContent(Component.literal("[●] ").withStyle(ChatFormatting.RED).withStyle(ChatFormatting.BOLD)
-                    .append(event.getOriginalContent().getString()));
-            else
-                event.setContent(Component.literal(event.getOriginalContent().getString()).setStyle(Style.EMPTY));
-        }
-    }
-
-
-    // This will check every chat event and will update the player's name based on whether they are live or not
+    static int tick = 0;
     @SubscribeEvent
-    public static void onChatEvent(ServerChatEvent event) {
-        Player player = event.getPlayer();
-        if (player.getServer() != null) {
-            player.refreshDisplayName();
+    public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
+        // It is going to check if the player is streaming every 1200 ticks ~ 60 seconds
+        if(tick != 1200) {
+            tick++;
+            return;
         }
+        tick = 0;
+        if(event.player instanceof ServerPlayer) {
+            ServerPlayer p = (ServerPlayer) event.player;
+            p.refreshTabListName();
+        }
+        event.player.refreshDisplayName();
     }
 
 
@@ -105,11 +102,12 @@ public class ModEvents {
     @SubscribeEvent
     public static void onNameFormat(PlayerEvent.NameFormat event) {
         if(event.getEntity() instanceof Player) {
-            if(isChannelLive(event.getEntity()))
-                event.setDisplayname(Component.literal("● ").withStyle(ChatFormatting.RED).withStyle(ChatFormatting.BOLD)
-                    .append(event.getUsername().getString()));
-            else
+            if(isChannelLive(event.getEntity())) {
+                event.setDisplayname(Component.literal("● ").withStyle(ChatFormatting.RED).append(event.getUsername().getString()));
+            }
+            else {
                 event.setDisplayname(Component.literal(event.getUsername().getString()).setStyle(Style.EMPTY));
+            }
         }
     }
 
