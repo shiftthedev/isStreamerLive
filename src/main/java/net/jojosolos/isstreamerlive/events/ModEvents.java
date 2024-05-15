@@ -6,6 +6,12 @@ import net.jojosolos.isstreamerlive.commands.SetStreamer;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
+import net.minecraft.network.protocol.game.ServerboundClientInformationPacket;
+import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
+import net.minecraft.network.protocol.game.ServerboundPlayerInputPacket;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.gui.PlayerListComponent;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.PlayerList;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
@@ -22,6 +28,7 @@ import net.minecraftforge.network.NetworkInstance;
 import net.minecraftforge.server.command.ConfigCommand;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -49,32 +56,31 @@ public class ModEvents {
         }
     }
 
-//    @SubscribeEvent
-//    public static void onPlayerJoin(EntityJoinLevelEvent event) throws IOException {
-//        // will reload to see if someone is live? I guess
-//        if(!event.getLevel().isClientSide && event.getEntity() instanceof Player) {
-//            event.getEntity().sendSystemMessage(Component.literal( event.getEntity().getName().getString() + " has joined").withStyle(ChatFormatting.BOLD));
-//            checkLive2(event.getEntity());
-//        }
-//    }
     @SubscribeEvent
     public static void onPlayerJoin(EntityJoinLevelEvent event) {
         if (event.getEntity() instanceof Player) {
             Player player = (Player) event.getEntity();
             if (player.getServer() != null) {
-                ForgeEventFactory.getPlayerDisplayName(player, Component.literal(player.getDisplayName().getString()));
-//                ForgeEventFactory.getPlayerDisplayName(player, player.getGameProfile().getName());
-//                player.getServer().getPlayerList().sendPacketToAllPlayers(new SPlayerListItemPacket(SPlayerListItemPacket.Action.UPDATE_DISPLAY_NAME));
-//                player.sendMessage(new KeybindTextComponent("Display name updated."));
+                // if the player that joined hasnt set up their streamer name, automatically set it to their minecraft name
+                if(!player.getPersistentData().contains(IsStreamerLive.MODID + "streamername")) {
+                    player.getPersistentData().putString(IsStreamerLive.MODID + "streamername", player.getDisplayName().getString());
+                }
             }
         }
+
     }
+
+    @SubscribeEvent
+    public static void onTablistFormat(PlayerEvent.TabListNameFormat event) {
+        event.setDisplayName(Component.literal("test").withStyle(ChatFormatting.AQUA));
+    }
+
 
     @SubscribeEvent
     public static void onNameFormat(PlayerEvent.NameFormat event) {
         if(event.getEntity() instanceof Player) {
             if(isChannelLive(event.getEntity()))
-                event.setDisplayname(Component.literal("[● LIVE] ").withStyle(ChatFormatting.RED).withStyle(ChatFormatting.BOLD)
+                event.setDisplayname(Component.literal(" ● ").withStyle(ChatFormatting.RED).withStyle(ChatFormatting.BOLD)
                     .append(event.getUsername().getString()));
             else
                 event.setDisplayname(Component.literal(event.getUsername().getString()).setStyle(Style.EMPTY));
