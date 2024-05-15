@@ -16,8 +16,10 @@ import net.minecraft.server.players.PlayerList;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
+import net.minecraftforge.client.event.RenderNameTagEvent;
 import net.minecraftforge.event.ForgeEventFactory;
 import net.minecraftforge.event.RegisterCommandsEvent;
+import net.minecraftforge.event.ServerChatEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.EntityJoinLevelEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
@@ -72,15 +74,39 @@ public class ModEvents {
 
     @SubscribeEvent
     public static void onTablistFormat(PlayerEvent.TabListNameFormat event) {
-        event.setDisplayName(Component.literal("test").withStyle(ChatFormatting.AQUA));
+//        event.setDisplayName(Component.literal(event.getEntity().getDisplayName().toString()).withStyle(ChatFormatting.RED));
+        event.setDisplayName(Component.literal("● ").withStyle(ChatFormatting.RED).withStyle(ChatFormatting.BOLD)
+                    .append(event.getEntity().getName().getString()));
+    }
+
+        @SubscribeEvent
+    public static void onRenderNamePlate(RenderNameTagEvent event) {
+        if(event.getEntity().getPersistentData().contains(IsStreamerLive.MODID + "streamername")) {
+            if(isChannelLive(event.getEntity()))
+                event.setContent(Component.literal("[●] ").withStyle(ChatFormatting.RED).withStyle(ChatFormatting.BOLD)
+                    .append(event.getOriginalContent().getString()));
+            else
+                event.setContent(Component.literal(event.getOriginalContent().getString()).setStyle(Style.EMPTY));
+        }
     }
 
 
+    // This will check every chat event and will update the player's name based on whether they are live or not
+    @SubscribeEvent
+    public static void onChatEvent(ServerChatEvent event) {
+        Player player = event.getPlayer();
+        if (player.getServer() != null) {
+            player.refreshDisplayName();
+        }
+    }
+
+
+    // This will format the player's name in the chat based on whether they are live or not.
     @SubscribeEvent
     public static void onNameFormat(PlayerEvent.NameFormat event) {
         if(event.getEntity() instanceof Player) {
             if(isChannelLive(event.getEntity()))
-                event.setDisplayname(Component.literal(" ● ").withStyle(ChatFormatting.RED).withStyle(ChatFormatting.BOLD)
+                event.setDisplayname(Component.literal("● ").withStyle(ChatFormatting.RED).withStyle(ChatFormatting.BOLD)
                     .append(event.getUsername().getString()));
             else
                 event.setDisplayname(Component.literal(event.getUsername().getString()).setStyle(Style.EMPTY));
